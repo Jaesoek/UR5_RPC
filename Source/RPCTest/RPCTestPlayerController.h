@@ -73,8 +73,6 @@ protected:
 	void OnInputStarted();
 	void OnSetDestinationTriggered();
 	void OnSetDestinationReleased();
-	void OnTouchTriggered();
-	void OnTouchReleased();
 
 	// Input handlers for checking...
 	void Move(const FInputActionValue& Value);
@@ -90,7 +88,6 @@ public:
 
 private:
 	FVector CachedDestination;
-	bool bIsTouch; // Is it a touch device
 
 private:
 	UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = "true"));

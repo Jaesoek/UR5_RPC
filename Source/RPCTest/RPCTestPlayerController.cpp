@@ -2,6 +2,7 @@
 
 #include "RPCTestPlayerController.h"
 #include "RPCTestCharacter.h"
+#include "StoneFixer.h"
 #include "AGameState.h"
 
 #include "GameFramework/Pawn.h"
@@ -59,12 +60,6 @@ void ARPCTestPlayerController::SetupInputComponent()
 		EnhancedInputComponent->BindAction(SetDestinationClickAction, ETriggerEvent::Completed, this, &ARPCTestPlayerController::OnSetDestinationReleased);
 		EnhancedInputComponent->BindAction(SetDestinationClickAction, ETriggerEvent::Canceled, this, &ARPCTestPlayerController::OnSetDestinationReleased);
 
-		// Setup touch input events
-		EnhancedInputComponent->BindAction(SetDestinationTouchAction, ETriggerEvent::Started, this, &ARPCTestPlayerController::OnInputStarted);
-		EnhancedInputComponent->BindAction(SetDestinationTouchAction, ETriggerEvent::Triggered, this, &ARPCTestPlayerController::OnTouchTriggered);
-		EnhancedInputComponent->BindAction(SetDestinationTouchAction, ETriggerEvent::Completed, this, &ARPCTestPlayerController::OnTouchReleased);
-		EnhancedInputComponent->BindAction(SetDestinationTouchAction, ETriggerEvent::Canceled, this, &ARPCTestPlayerController::OnTouchReleased);
-
 		// Setup WASD Move input events
 		EnhancedInputComponent->BindAction(SetMovePressedAction, ETriggerEvent::Triggered, this, &ARPCTestPlayerController::Move);
 
@@ -87,30 +82,20 @@ void ARPCTestPlayerController::OnInputStarted()
 
 void ARPCTestPlayerController::OnSetDestinationTriggered()
 {
-	// We flag that the input is being pressed
 	FollowTime += GetWorld()->GetDeltaSeconds();
-	
-	// We look for the location in the world where the player has pressed the input
+
 	FHitResult Hit;
 	bool bHitSuccessful = false;
-	if (bIsTouch)
-	{
-		bHitSuccessful = GetHitResultUnderFinger(ETouchIndex::Touch1, ECollisionChannel::ECC_Visibility, true, Hit);
-	}
-	else
-	{
-		bHitSuccessful = GetHitResultUnderCursor(ECollisionChannel::ECC_Visibility, true, Hit);
-	}
-
-	// If we hit a surface, cache the location
+	bHitSuccessful = GetHitResultUnderCursor(ECollisionChannel::ECC_Visibility, true, Hit);
 	if (bHitSuccessful)
-	{
 		CachedDestination = Hit.Location;
-	}
-	
-	// Move towards mouse pointer or touch
+
+	// 분기 발생
 	APawn* ControlledPawn = GetPawn();
-	if (ControlledPawn != nullptr)
+	if (!IsValid(ControlledPawn))
+		return;
+
+	if (!ControlledPawn->ActorHasTag(FName{ "Fixer" }))
 	{
 		FVector WorldDirection = (CachedDestination - ControlledPawn->GetActorLocation()).GetSafeNormal();
 		ControlledPawn->AddMovementInput(WorldDirection, 1.0, false);
@@ -119,8 +104,16 @@ void ARPCTestPlayerController::OnSetDestinationTriggered()
 
 void ARPCTestPlayerController::OnSetDestinationReleased()
 {
-	// If it was a short press
-	if (FollowTime <= ShortPressThreshold)
+	APawn* ControlledPawn = GetPawn();
+	if (!IsValid(ControlledPawn))
+		return;
+
+	if (ControlledPawn->ActorHasTag(FName{ "Fixer" }))
+	{
+		auto pStoneFixer = Cast<AStoneFixer>(ControlledPawn);
+		pStoneFixer->PlaceStones(CachedDestination);
+	}
+	else if (FollowTime <= ShortPressThreshold)
 	{
 		// We move there and spawn some particles
 		UAIBlueprintHelperLibrary::SimpleMoveToLocation(this, CachedDestination);
@@ -128,18 +121,6 @@ void ARPCTestPlayerController::OnSetDestinationReleased()
 	}
 
 	FollowTime = 0.f;
-}
-
-void ARPCTestPlayerController::OnTouchTriggered()
-{
-	bIsTouch = true;
-	OnSetDestinationTriggered();
-}
-
-void ARPCTestPlayerController::OnTouchReleased()
-{
-	bIsTouch = false;
-	OnSetDestinationReleased();
 }
 
 void ARPCTestPlayerController::Move(const FInputActionValue& Value)

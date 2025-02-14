@@ -1,5 +1,7 @@
 
 #include "StoneFixer.h"
+#include "RPCTestPlayerController.h"
+#include "StoneActor.h"
 
 AStoneFixer::AStoneFixer()
 {
@@ -14,6 +16,22 @@ void AStoneFixer::BeginPlay()
 void AStoneFixer::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	if (GetController() != nullptr)
+	{
+		APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
+		if (!PlayerController)
+			return;
+
+		FHitResult Hit;
+		bool bHitSuccessful = false;
+		bHitSuccessful = PlayerController->GetHitResultUnderCursor(ECollisionChannel::ECC_Visibility, true, Hit);
+		if (bHitSuccessful)
+		{
+			m_vCachedPos = Hit.Location;
+			m_pTempStone->MoveTo(m_vCachedPos);
+		}
+	}
 }
 
 void AStoneFixer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -26,9 +44,8 @@ void AStoneFixer::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
 
-	// 필요시
- 	//SetOwner(NewController);
+	m_pController = Cast<ARPCTestPlayerController>(NewController);
 
-	// TODO: UI 출력하기
-
+	m_pTempStone = GetWorld()->SpawnActor<AStoneActor>(m_TempStoneClass, m_vCachedPos, GetActorRotation());
+	m_pTempStone->SetOwner(this);
 }

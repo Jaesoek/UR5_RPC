@@ -25,3 +25,7 @@ void AStoneActor::Tick(float DeltaTime)
 
 }
 
+void AStoneActor::MoveTo(FVector fLocation)
+{
+	SetActorLocation(fLocation);
+}
