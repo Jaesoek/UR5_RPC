@@ -29,7 +29,8 @@ void AStoneFixer::Tick(float DeltaTime)
 		if (bHitSuccessful)
 		{
 			m_vCachedPos = Hit.Location;
-			m_pTempStone->MoveTo(m_vCachedPos);
+			if (IsValid(m_pTempStone))
+				m_pTempStone->MoveTo(m_vCachedPos);
 		}
 	}
 }
@@ -46,6 +47,13 @@ void AStoneFixer::PossessedBy(AController* NewController)
 
 	m_pController = Cast<ARPCTestPlayerController>(NewController);
 
+	// TODO: ¿©±â¼­ 
 	m_pTempStone = GetWorld()->SpawnActor<AStoneActor>(m_TempStoneClass, m_vCachedPos, GetActorRotation());
-	m_pTempStone->SetOwner(this);
+	m_pTempStone->SetOwner(GetController());
+}
+
+void AStoneFixer::UnPossessed()
+{
+	if (IsValid(m_pTempStone))
+		m_pTempStone->Destroy();
 }
